@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Tracker — Agilian Technologies (Collaborative)</title>
+
+<!-- Firebase SDK (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- SheetJS for Excel import -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Slab:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --surface: #ffffff;
+    --ink: #1a2332;
+    --ink-soft: #54595f;
+    --muted: #8a9ab0;
+    --rule: #dde4ee;
+    --rule-strong: #c4cedf;
+    --accent: #6ec1e4;
+    --accent-dark: #344671;
+    --accent-soft: #ddf0fb;
+    --ok: #61ce70;
+    --warn: #f6a623;
+    --risk: #c90a11;
+    --today: #6ec1e4;
+    --bar-1: #344671;
+    --bar-2: #6ec1e4;
+    --bar-3: #61ce70;
+    --bar-4: #54595f;
+    --bar-5: #8a9ab0;
+    --bar-6: #c90a11;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    padding: 0 0 48px;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(110,193,228,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 90%, rgba(52,70,113,0.04) 0%, transparent 50%);
+  }
+
+  .container { max-width: 1600px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── Setup Banner ── */
+  .setup-banner {
+    background: #fff8e6;
+    border-bottom: 3px solid var(--warn);
+    padding: 16px 32px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .setup-banner strong { color: #b87800; }
+  .setup-banner ol { margin: 10px 0 0 20px; color: var(--ink-soft); }
+  .setup-banner ol li { margin: 4px 0; }
+  .setup-banner code {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    background: rgba(0,0,0,0.07);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  /* ── Sync status bar ── */
+  .sync-bar {
+    background: var(--accent-dark);
+    padding: 7px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.75);
+  }
+
+  .sync-bar .sync-left { display: flex; align-items: center; gap: 14px; flex: 1; }
+  .sync-bar .sync-right { display: flex; align-items: center; gap: 12px; }
+
+  #sync-status-indicator {
+    font-weight: 500;
+    transition: color 0.3s;
+    min-width: 90px;
+  }
+
+  .presence-area { display: flex; align-items: center; gap: 8px; }
+  .presence-dots { display: flex; gap: 4px; align-items: center; }
+  .presence-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    flex-shrink: 0;
+  }
+  .presence-dot.you { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
+  #presence-count { color: rgba(255,255,255,0.6); font-size: 10px; }
+
+  .view-mode-badge {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    background: rgba(246,166,35,0.25);
+    border: 1px solid rgba(246,166,35,0.5);
+    color: var(--warn);
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── Masthead ── */
+  .masthead {
+    background: var(--accent-dark);
+    color: #fff;
+    padding: 0 32px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 32px;
+    min-height: 72px;
+  }
+
+  .masthead-logo img {
+    display: block;
+    height: 42px;
+    width: auto;
+    filter: brightness(0) invert(1);
+  }
+
+  .masthead h1 {
+    font-family: 'Roboto Slab', serif;
+    font-weight: 400;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+    color: #fff;
+  }
+
+  .masthead h1 em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--accent);
+  }
+
+  .masthead .meta {
+    text-align: right;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+  }
+
+  .masthead .meta strong { color: #fff; font-weight: 500; }
+
+  /* ── Project info bar ── */
+  .info-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--rule-strong);
+    background: var(--surface);
+    margin-bottom: 32px;
+    border-top: 3px solid var(--accent);
+  }
+
+  .info-cell { padding: 16px 20px; border-right: 1px solid var(--rule); }
+  .info-cell:last-child { border-right: none; }
+
+  .info-cell .k {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  .info-cell input {
+    border: none;
+    background: transparent;
+    font-family: 'Roboto Slab', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+    width: 100%;
+    padding: 0;
+    outline: none;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.15s;
+  }
+  .info-cell input:hover { border-bottom-color: var(--rule-strong); }
+  .info-cell input:focus { border-bottom-color: var(--accent); }
+
+  /* ── Section headers ── */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 40px 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent-dark);
+  }
+
+  .section-head h2 {
+    font-family: 'Roboto Slab', serif;
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    color: var(--accent-dark);
+  }
+
+  .section-head .caption {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; }
+
+  button, .btn {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 3px;
+  }
+
+  button:hover, .btn:hover {
+    background: var(--accent-dark);
+    color: #fff;
+    border-color: var(--accent-dark);
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+
+  button.share-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 10px;
+    padding: 5px 12px;
+  }
+  button.share-btn:hover { background: rgba(255,255,255,0.25); color: #fff; }
+
+  /* ── Task table ── */
+  .task-wrap {
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    overflow-x: auto;
+    border-radius: 4px;
+  }
+
+  table.tasks {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 1100px;
+  }
+
+  table.tasks th {
+    text-align: left;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--rule-strong);
+    background: #edf2f8;
+    white-space: nowrap;
+  }
+
+  table.tasks td {
+    padding: 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+  }
+
+  table.tasks tr:last-child td { border-bottom: none; }
+  table.tasks tr:hover td { background: #f5f9fd; }
+
+  table.tasks td input, table.tasks td select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 11px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    border: 1px solid transparent;
+    transition: all 0.1s;
+  }
+
+  table.tasks td input:focus, table.tasks td select:focus {
+    border-color: var(--accent);
+    background: #fff;
+  }
+
+  table.tasks td.id-cell {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 12px;
+    width: 56px;
+    text-align: center;
+  }
+
+  table.tasks td.actions { width: 40px; text-align: center; padding: 0 6px; }
+
+  .row-delete {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 6px 8px; line-height: 1; transition: color 0.15s; border-radius: 0;
+  }
+  .row-delete:hover { color: var(--risk); background: none; }
+
+  .col-task { min-width: 220px; }
+  .col-owner { width: 130px; }
+  .col-date { width: 160px; }
+  .col-duration { width: 80px; }
+  .col-deps { width: 110px; }
+  .col-status { width: 130px; }
+  .col-progress { width: 100px; }
+
+  .status-select {
+    font-family: 'Roboto Mono', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .date-cell-wrap { position: relative; }
+  .date-cell-wrap input[type="date"] { padding: 11px 12px 6px; }
+
+  .dep-driven-badge {
+    display: block;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 0 12px 5px;
+    line-height: 1;
+  }
+
+  /* ── Milestones ── */
+  .milestones-bar {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--rule-strong);
+    border-top: 3px solid var(--accent-dark);
+    background: var(--surface);
+    margin-bottom: 32px;
+    overflow-x: auto;
+    border-radius: 4px;
+  }
+
+  .milestone-card {
+    flex: 1; min-width: 160px;
+    padding: 14px 18px 12px;
+    border-right: 1px solid var(--rule);
+    position: relative;
+  }
+  .milestone-card:last-child { border-right: none; }
+  .milestone-card .ms-label {
+    font-family: 'Roboto Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  }
+  .milestone-card input[type="text"].ms-name {
+    border: none; background: transparent;
+    font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 500;
+    color: var(--ink); width: 100%; padding: 0 0 2px; outline: none;
+    border-bottom: 1px dashed transparent; transition: border-color 0.15s;
+    display: block; margin-bottom: 6px;
+  }
+  .milestone-card input[type="text"].ms-name:hover { border-bottom-color: var(--rule-strong); }
+  .milestone-card input[type="text"].ms-name:focus { border-bottom-color: var(--accent-dark); }
+  .milestone-card input[type="text"].ms-name::placeholder { color: var(--muted); font-weight: 400; }
+  .milestone-card input[type="date"].ms-date {
+    border: none; background: transparent;
+    font-family: 'Roboto Slab', serif; font-size: 17px; font-weight: 500;
+    color: var(--accent-dark); width: 100%; padding: 0; outline: none;
+    border-bottom: 1px dashed transparent; transition: border-color 0.15s;
+  }
+  .milestone-card input[type="date"].ms-date:hover { border-bottom-color: var(--rule-strong); }
+  .milestone-card input[type="date"].ms-date:focus { border-bottom-color: var(--accent); }
+  .milestone-card .ms-status {
+    font-family: 'Roboto Mono', monospace; font-size: 10px; letter-spacing: 0.06em;
+    text-transform: uppercase; margin-top: 6px; display: flex; align-items: center; gap: 5px;
+  }
+  .milestone-card .ms-status.overdue  { color: var(--risk); }
+  .milestone-card .ms-status.today    { color: var(--warn); }
+  .milestone-card .ms-status.upcoming { color: var(--ok); }
+  .milestone-card .ms-status.future   { color: var(--muted); }
+  .ms-delete {
+    position: absolute; top: 8px; right: 6px; background: none; border: none;
+    color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 6px; line-height: 1;
+    opacity: 0; transition: opacity 0.15s, color 0.15s; border-radius: 0;
+  }
+  .milestone-card:hover .ms-delete { opacity: 1; }
+  .ms-delete:hover { color: var(--risk); background: none; }
+  .milestones-add-btn {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    width: 48px; background: none; border: none;
+    border-left: 1px dashed var(--rule-strong); color: var(--muted); font-size: 22px;
+    cursor: pointer; padding: 0; border-radius: 0; letter-spacing: 0; text-transform: none;
+    transition: color 0.15s, background 0.15s;
+  }
+  .milestones-add-btn:hover { color: var(--accent-dark); background: #f0f4fb; }
+
+  /* ── Gantt ── */
+  .gantt-wrap { background: var(--surface); border: 1px solid var(--rule-strong); overflow: hidden; border-radius: 4px; }
+  .gantt-scroll { overflow-x: auto; overflow-y: visible; }
+  .gantt { display: grid; grid-template-columns: 280px 1fr; min-width: 900px; }
+  .gantt-labels { background: #edf2f8; border-right: 1px solid var(--rule-strong); }
+  .gantt-label-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--rule-strong);
+    font-family: 'Roboto Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); height: 56px; display: flex; align-items: flex-end;
+  }
+  .gantt-label-row {
+    padding: 10px 16px; border-bottom: 1px solid var(--rule);
+    height: 44px; display: flex; align-items: center; gap: 10px;
+  }
+  .gantt-label-row:last-child { border-bottom: none; }
+  .gantt-label-row .tid { font-family: 'Roboto Mono', monospace; font-size: 10px; color: var(--muted); flex-shrink: 0; }
+  .gantt-label-row .tname { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .gantt-label-row .towner { font-family: 'Roboto Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+  .gantt-timeline { position: relative; overflow-x: auto; }
+  .gantt-header {
+    display: flex; border-bottom: 1px solid var(--rule-strong); height: 56px;
+    position: sticky; top: 0; background: #edf2f8; z-index: 2;
+  }
+  .gantt-month { flex-shrink: 0; border-right: 1px solid var(--rule); display: flex; flex-direction: column; overflow: hidden; }
+  .gantt-month-label {
+    padding: 8px 12px; font-family: 'Roboto Slab', serif; font-size: 13px; font-weight: 500;
+    border-bottom: 1px solid var(--rule); background: #dce6f2; color: var(--accent-dark);
+  }
+  .gantt-days { display: flex; flex: 1; }
+  .gantt-day { flex-shrink: 0; border-right: 1px solid rgba(0,0,0,0.04); font-family: 'Roboto Mono', monospace; font-size: 9px; color: var(--muted); text-align: center; padding: 6px 0 4px; }
+  .gantt-day.weekend { background: rgba(0,0,0,0.02); color: #bbb; }
+  .gantt-day.today-marker { color: var(--accent); font-weight: 700; }
+  .gantt-body { position: relative; }
+  .gantt-row { height: 44px; border-bottom: 1px solid var(--rule); position: relative; display: flex; }
+  .gantt-row:last-child { border-bottom: none; }
+  .gantt-row:hover { background: #f5f9fd; }
+  .gantt-row-cell { flex-shrink: 0; border-right: 1px solid rgba(0,0,0,0.03); height: 100%; }
+  .gantt-row-cell.weekend { background: rgba(0,0,0,0.02); }
+  .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); z-index: 3; pointer-events: none; }
+  .today-line::before {
+    content: 'TODAY'; position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+    font-family: 'Roboto Mono', monospace; font-size: 9px; letter-spacing: 0.12em;
+    color: var(--accent); background: var(--bg); padding: 2px 6px; white-space: nowrap;
+  }
+  .bar {
+    position: absolute; top: 10px; height: 24px; border-radius: 3px;
+    display: flex; align-items: center; padding: 0 8px; font-size: 11px;
+    color: #fff; font-weight: 500; overflow: hidden; white-space: nowrap;
+    cursor: pointer; transition: filter 0.15s, transform 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .bar:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.18); }
+  .bar-progress { position: absolute; top: 0; left: 0; bottom: 0; background: rgba(0,0,0,0.18); border-right: 1px solid rgba(255,255,255,0.3); }
+  .bar-label { position: relative; z-index: 1; text-overflow: ellipsis; overflow: hidden; }
+  .bar.status-not-started { opacity: 0.65; }
+  .bar.status-complete { opacity: 0.5; }
+  .bar.status-blocked { background: var(--risk) !important; }
+  .bar.status-at-risk { background: var(--warn) !important; }
+  .dep-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  .dep-line { stroke: var(--accent-dark); stroke-width: 1.5; fill: none; opacity: 0.45; stroke-dasharray: 4 2; }
+  .dep-arrow { fill: var(--accent-dark); opacity: 0.55; }
+  .legend {
+    display: flex; gap: 24px; padding: 12px 20px; border-top: 1px solid var(--rule);
+    background: #edf2f8; font-family: 'Roboto Mono', monospace; font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 10px; border-radius: 2px; }
+
+  /* ── Dep-driven ── */
+  tr.has-dep-date td.col-date-cell { background: rgba(110,193,228,0.06); }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule-strong);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Roboto Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .footer img { height: 28px; width: auto; opacity: 0.5; }
+
+  /* ── Modals (shared base) ── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,35,50,0.55); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--rule-strong);
+    border-top: 4px solid var(--accent-dark); max-width: 95vw; max-height: 90vh;
+    display: flex; flex-direction: column; border-radius: 4px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  }
+  .modal-header {
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .modal-header h3 { font-family: 'Roboto Slab', serif; font-size: 20px; font-weight: 400; color: var(--accent-dark); }
+  .modal-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0 4px; line-height: 1; border-radius: 0; }
+  .modal-close:hover { color: var(--ink); background: none; }
+  .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--rule);
+    display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; background: #f5f7fb;
+  }
+
+  /* ── Share modal ── */
+  #share-dialog { width: 560px; }
+
+  .share-section { margin-bottom: 24px; }
+  .share-section:last-child { margin-bottom: 0; }
+
+  .share-section h4 {
+    font-family: 'Roboto Slab', serif; font-size: 15px; font-weight: 400;
+    color: var(--accent-dark); margin-bottom: 4px;
+  }
+  .share-section p { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+
+  .share-url-row {
+    display: flex; gap: 8px; align-items: center;
+  }
+
+  .share-url-row input[type="text"] {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--rule-strong); border-radius: 3px;
+    font-family: 'Roboto Mono', monospace; font-size: 11px; color: var(--ink-soft);
+    background: #f5f7fb; outline: none; cursor: text;
+  }
+
+  .share-url-row input[type="text"]:focus { border-color: var(--accent); }
+
+  .copy-btn {
+    font-size: 11px; padding: 9px 14px; white-space: nowrap; flex-shrink: 0;
+  }
+
+  .copy-feedback {
+    font-family: 'Roboto Mono', monospace; font-size: 11px;
+    color: var(--ok); display: none; margin-top: 4px;
+  }
+
+  .share-notice {
+    background: #edf6fc; border: 1px solid var(--rule-strong); border-left: 4px solid var(--accent);
+    padding: 12px 16px; border-radius: 0 3px 3px 0; font-size: 12px; color: var(--ink-soft);
+    margin-bottom: 20px; line-height: 1.6;
+  }
+
+  .share-divider {
+    border: none; border-top: 1px solid var(--rule); margin: 20px 0;
+  }
+
+  /* ── Import modal ── */
+  #import-dialog { width: 860px; }
+
+  .drop-zone {
+    border: 2px dashed var(--rule-strong); border-radius: 4px; padding: 48px 24px;
+    text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    background: var(--bg);
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop-zone .dz-icon { font-size: 36px; margin-bottom: 12px; }
+  .drop-zone .dz-title { font-family: 'Roboto Slab', serif; font-size: 17px; color: var(--ink); margin-bottom: 6px; }
+  .drop-zone .dz-sub { font-size: 13px; color: var(--muted); }
+  .drop-zone input[type="file"] { display: none; }
+  .sheet-picker { display: none; margin-top: 20px; }
+  .sheet-picker label { font-family: 'Roboto Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+  .sheet-picker select { font-family: 'Roboto', sans-serif; font-size: 14px; padding: 8px 12px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); border-radius: 3px; outline: none; cursor: pointer; min-width: 200px; }
+  .sheet-picker select:focus { border-color: var(--accent); }
+  .mapping-section { display: none; margin-top: 24px; }
+  .mapping-section h4 { font-family: 'Roboto Slab', serif; font-size: 16px; font-weight: 400; color: var(--accent-dark); margin-bottom: 4px; }
+  .mapping-hint { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .mapping-grid { display: grid; grid-template-columns: 180px 1fr; gap: 10px 16px; align-items: center; margin-bottom: 20px; }
+  .mapping-grid .map-label { font-family: 'Roboto Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .mapping-grid .map-required::after { content: ' *'; color: var(--risk); }
+  .mapping-grid select { font-family: 'Roboto', sans-serif; font-size: 13px; padding: 7px 10px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); border-radius: 3px; outline: none; width: 100%; max-width: 300px; }
+  .mapping-grid select:focus { border-color: var(--accent); }
+  .preview-section { display: none; margin-top: 20px; }
+  .preview-section h4 { font-family: 'Roboto Slab', serif; font-size: 15px; font-weight: 400; color: var(--accent-dark); margin-bottom: 10px; }
+  .preview-scroll { overflow-x: auto; border: 1px solid var(--rule-strong); border-radius: 3px; max-height: 220px; overflow-y: auto; }
+  table.preview-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 600px; }
+  table.preview-table th { background: #edf2f8; padding: 8px 10px; font-family: 'Roboto Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-align: left; border-bottom: 1px solid var(--rule-strong); position: sticky; top: 0; }
+  table.preview-table td { padding: 7px 10px; border-bottom: 1px solid var(--rule); color: var(--ink-soft); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+  table.preview-table tr:last-child td { border-bottom: none; }
+  table.preview-table tr:hover td { background: #f5f9fd; }
+  .import-options { display: block; margin-top: 16px; padding: 14px 16px; background: #edf2f8; border-radius: 3px; border: 1px solid var(--rule); }
+  .import-options label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+  .import-options input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent-dark); cursor: pointer; }
+
+  /* ── View-only mode ── */
+  body.view-mode .hide-in-view { display: none !important; }
+  body.view-mode table.tasks td input,
+  body.view-mode table.tasks td select,
+  body.view-mode .info-cell input,
+  body.view-mode .ms-name,
+  body.view-mode .ms-date { pointer-events: none; opacity: 0.85; }
+
+  @media print {
+    .masthead { background: var(--accent-dark) !important; -webkit-print-color-adjust: exact; }
+    .sync-bar, .setup-banner, button, .toolbar, .row-delete { display: none !important; }
+    body { padding: 0; background: white; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Setup Banner (hidden when Firebase is configured) ── -->
+<div id="setup-banner" class="setup-banner" style="display:none;">
+  <strong>⚙ Firebase not configured — collaboration is disabled.</strong>
+  To enable live collaboration, open this file in a text editor and fill in the <code>FIREBASE_CONFIG</code> block near the bottom of the file:
+  <ol>
+    <li>Go to <strong>console.firebase.google.com</strong> → create a project (free)</li>
+    <li>Click <strong>Add App → Web (&lt;/&gt;)</strong> — copy the <code>firebaseConfig</code> object shown</li>
+    <li>Go to <strong>Build → Realtime Database → Create database → Start in test mode</strong></li>
+    <li>Paste your config values into the <code>FIREBASE_CONFIG</code> block in this file and save</li>
+    <li>Host this file on GitHub Pages, Netlify, or any web server — then share the URL</li>
+  </ol>
+  <em style="color: var(--muted); font-size: 12px;">Until configured, this file works as a standalone tracker only.</em>
+</div>
+
+<!-- ── Masthead ── -->
+<header class="masthead">
+  <div class="masthead-logo">
+    <img src="https://www.agiliantech.com/wp-content/uploads/2019/10/agilian-logo.png" alt="Agilian Technologies">
+  </div>
+  <h1>Project <em>Tracker</em></h1>
+  <div class="meta">
+    <div>Generated <strong id="gen-date">—</strong></div>
+    <div id="version-label">Collaborative v1.0</div>
+  </div>
+</header>
+
+<!-- ── Sync Status Bar (shown when Firebase is ready) ── -->
+<div id="sync-bar" class="sync-bar" style="display:none;">
+  <div class="sync-left">
+    <span id="sync-status-indicator" style="color: var(--warn);">○ Connecting…</span>
+    <span style="color: rgba(255,255,255,0.3);">|</span>
+    <div class="presence-area">
+      <div class="presence-dots" id="presence-dots"></div>
+      <span id="presence-count">—</span>
+    </div>
+    <div id="view-mode-badge" class="view-mode-badge">👁 View Only</div>
+  </div>
+  <div class="sync-right">
+    <span id="project-id-display" style="color: rgba(255,255,255,0.4); font-size: 10px;"></span>
+    <button class="share-btn hide-in-view" onclick="openShareModal()">🔗 Share</button>
+    <button class="share-btn" onclick="window.print()">Print / PDF</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Project info -->
+  <div class="info-bar" style="margin-top: 28px;">
+    <div class="info-cell">
+      <div class="k">Project</div>
+      <input type="text" id="proj-name" placeholder="Project name" onchange="syncMeta()">
+    </div>
+    <div class="info-cell">
+      <div class="k">Client</div>
+      <input type="text" id="proj-client" placeholder="Client / stakeholder" onchange="syncMeta()">
+    </div>
+    <div class="info-cell">
+      <div class="k">Project Manager</div>
+      <input type="text" id="proj-pm" placeholder="Name" onchange="syncMeta()">
+    </div>
+    <div class="info-cell">
+      <div class="k">Status</div>
+      <input type="text" id="proj-status" placeholder="In progress / planned" onchange="syncMeta()">
+    </div>
+  </div>
+
+  <!-- Milestones -->
+  <div class="section-head" style="margin-top: 0;">
+    <div>
+      <div class="caption">§ 01</div>
+      <h2>Key Milestones</h2>
+    </div>
+    <div class="toolbar hide-in-view">
+      <button onclick="addMilestone()">+ Add Milestone</button>
+    </div>
+  </div>
+  <div class="milestones-bar" id="milestones-bar"></div>
+
+  <!-- Tasks -->
+  <div class="section-head">
+    <div>
+      <div class="caption">§ 02</div>
+      <h2>Tasks &amp; Ownership</h2>
+    </div>
+    <div class="toolbar hide-in-view">
+      <button onclick="addTask()">+ Add Task</button>
+      <button onclick="openImportModal()">⬆ Import Excel</button>
+      <button onclick="saveFile()" class="primary">Save Copy</button>
+    </div>
+  </div>
+
+  <div class="task-wrap">
+    <table class="tasks" id="task-table">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-task">Task</th>
+          <th class="col-owner">Owner</th>
+          <th class="col-date">Start Date</th>
+          <th class="col-duration">Days</th>
+          <th class="col-deps">Depends On</th>
+          <th class="col-status">Status</th>
+          <th class="col-progress">% Done</th>
+          <th class="hide-in-view"></th>
+        </tr>
+      </thead>
+      <tbody id="task-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Gantt -->
+  <div class="section-head">
+    <div>
+      <div class="caption">§ 03</div>
+      <h2>Gantt Chart</h2>
+    </div>
+    <div class="toolbar">
+      <button onclick="changeZoom(-1)">− Zoom</button>
+      <button onclick="changeZoom(1)">+ Zoom</button>
+    </div>
+  </div>
+
+  <div class="gantt-wrap">
+    <div class="gantt-scroll">
+      <div class="gantt" id="gantt"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--bar-1);"></div> In progress</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--bar-1); opacity: 0.65;"></div> Not started</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--bar-1); opacity: 0.5;"></div> Complete</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--warn);"></div> At risk</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--risk);"></div> Blocked</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--accent); width:2px; height:12px;"></div> Today</div>
+      <div class="legend-item">-- Dependency</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <img src="https://www.agiliantech.com/wp-content/uploads/2019/10/agilian-logo.png" alt="Agilian Technologies">
+    <span>Collaborative Project Tracker</span>
+    <span>Real-time · Multi-user · Print-ready</span>
+  </footer>
+
+</div><!-- /.container -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SHARE MODAL
+     ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="share-modal">
+  <div class="modal" id="share-dialog">
+    <div class="modal-header">
+      <h3>Share this project</h3>
+      <button class="modal-close" onclick="closeShareModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="share-notice">
+        <strong>Hosting required for collaboration.</strong> For others to join in real time, this file must be hosted at a public URL. Free options: <strong>GitHub Pages</strong>, <strong>Netlify Drop</strong>, or <strong>Vercel</strong>. Then share the links below. Anyone with the edit link can make changes; the view link is read-only.
+      </div>
+
+      <div class="share-section">
+        <h4>✏️ Edit link — full access</h4>
+        <p>Share with your R&D team and anyone who should be able to update the tracker.</p>
+        <div class="share-url-row">
+          <input type="text" id="share-edit-url" readonly onclick="this.select()">
+          <button class="copy-btn" onclick="copyUrl('share-edit-url','copy-feedback-edit')">Copy</button>
+        </div>
+        <div class="copy-feedback" id="copy-feedback-edit">✓ Copied to clipboard</div>
+      </div>
+
+      <hr class="share-divider">
+
+      <div class="share-section">
+        <h4>👁 View link — read-only</h4>
+        <p>Share with your customer. They can see all live updates but cannot edit anything.</p>
+        <div class="share-url-row">
+          <input type="text" id="share-view-url" readonly onclick="this.select()">
+          <button class="copy-btn" onclick="copyUrl('share-view-url','copy-feedback-view')">Copy</button>
+        </div>
+        <div class="copy-feedback" id="copy-feedback-view">✓ Copied to clipboard</div>
+      </div>
+
+      <hr class="share-divider">
+
+      <div class="share-section">
+        <h4>🆔 Project ID</h4>
+        <p>Use this to open the same project in a different copy of this file (same Firebase project).</p>
+        <div class="share-url-row">
+          <input type="text" id="share-project-id" readonly onclick="this.select()">
+          <button class="copy-btn" onclick="copyUrl('share-project-id','copy-feedback-id')">Copy</button>
+        </div>
+        <div class="copy-feedback" id="copy-feedback-id">✓ Copied to clipboard</div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeShareModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     IMPORT MODAL
+     ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="import-modal">
+  <div class="modal" id="import-dialog">
+    <div class="modal-header">
+      <h3>Import from Excel</h3>
+      <button class="modal-close" onclick="closeImportModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleFileDrop(event)">
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)">
+        <div class="dz-icon">📂</div>
+        <div class="dz-title">Drop your Excel file here, or click to browse</div>
+        <div class="dz-sub">Supports .xlsx, .xls, and .csv files</div>
+      </div>
+      <div class="sheet-picker" id="sheet-picker">
+        <label>Select worksheet</label>
+        <select id="sheet-select" onchange="loadSheet()"></select>
+      </div>
+      <div class="mapping-section" id="mapping-section">
+        <h4>Map your columns</h4>
+        <p class="mapping-hint">Match your spreadsheet columns to tracker fields. Required fields are marked *.</p>
+        <div class="mapping-grid">
+          <span class="map-label map-required">Task Name</span><select id="map-name"><option value="">— skip —</option></select>
+          <span class="map-label">Owner</span><select id="map-owner"><option value="">— skip —</option></select>
+          <span class="map-label">Start Date</span><select id="map-start"><option value="">— skip —</option></select>
+          <span class="map-label">Duration (days)</span><select id="map-duration"><option value="">— skip —</option></select>
+          <span class="map-label">Depends On</span><select id="map-deps"><option value="">— skip —</option></select>
+          <span class="map-label">Status</span><select id="map-status"><option value="">— skip —</option></select>
+          <span class="map-label">% Complete</span><select id="map-progress"><option value="">— skip —</option></select>
+        </div>
+        <div class="import-options">
+          <label>
+            <input type="checkbox" id="opt-replace" checked>
+            Replace existing tasks (uncheck to append)
+          </label>
+        </div>
+      </div>
+      <div class="preview-section" id="preview-section">
+        <h4>Preview <span id="preview-count" style="font-family:'Roboto Mono',monospace; font-size:12px; color:var(--muted);"></span></h4>
+        <div class="preview-scroll">
+          <table class="preview-table" id="preview-table"></table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeImportModal()">Cancel</button>
+      <button class="primary" id="import-btn" onclick="runImport()" disabled>Import Tasks</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  FIREBASE CONFIGURATION
+//  ➜ Replace all "YOUR_…" values with your actual Firebase credentials.
+//
+//  How to get them (takes ~5 minutes, free):
+//  1. Go to https://console.firebase.google.com
+//  2. Create a project (give it any name)
+//  3. Click the </> Web icon → register app → copy the firebaseConfig shown
+//  4. In the Firebase console: Build → Realtime Database → Create database
+//     → choose a region → Start in test mode → Done
+//  5. Paste your values below and save this file
+//  6. Host the file anywhere (GitHub Pages, Netlify, Vercel) and share the URL
+// ════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDUsPYpqv0Yc8_WpMAI_fCNRLHt12BnjVc",
+  authDomain:        "luci-glasses-4.firebaseapp.com",
+  databaseURL:       "https://luci-glasses-4-default-rtdb.firebaseio.com",
+  projectId:         "luci-glasses-4",
+  storageBucket:     "luci-glasses-4.firebasestorage.app",
+  messagingSenderId: "1004450793682",
+  appId:             "1:1004450793682:web:8c29e00d3717cab2cb850b"
+};
+// ════════════════════════════════════════════════════════════════════
+
+// ── Presence colours – one is assigned randomly to each session ──
+const PRESENCE_COLORS = ['#6ec1e4','#344671','#61ce70','#f6a623','#c90a11','#a78bfa'];
+
+// ── Detect whether config has been filled in ──
+const FIREBASE_READY = !Object.values(FIREBASE_CONFIG).some(v => String(v).startsWith('YOUR_'));
+
+// ── Per-session identity (survives page refresh, not shared across tabs) ──
+const clientId = sessionStorage.getItem('agln_cid') || Math.random().toString(36).slice(2, 10);
+sessionStorage.setItem('agln_cid', clientId);
+const myColor = PRESENCE_COLORS[Math.floor(Math.random() * PRESENCE_COLORS.length)];
+
+let db          = null;
+let projectId   = null;
+let isViewOnly  = false;
+let syncTimer   = null;
+
+// ════════════════════════════════════════════════════════════════════
+//  MILESTONES
+// ════════════════════════════════════════════════════════════════════
+let milestones = [];
+let nextMsId   = 1;
+
+function makeMilestone(o = {}) {
+  return { id: 'M' + nextMsId++, name: '', date: '', ...o };
+}
+
+function addMilestone() {
+  milestones.push(makeMilestone());
+  renderMilestones();
+  pushToFirebase();
+}
+
+function deleteMilestone(id) {
+  milestones = milestones.filter(m => m.id !== id);
+  renderMilestones();
+  pushToFirebase();
+}
+
+function updateMilestone(id, field, value) {
+  const m = milestones.find(m => m.id === id);
+  if (!m) return;
+  m[field] = value;
+  if (field === 'date') renderMilestones(); // rebadge
+  pushToFirebase();
+}
+
+function renderMilestones() {
+  const bar    = document.getElementById('milestones-bar');
+  const today_ = fmtDate(today());
+
+  if (milestones.length === 0) {
+    bar.innerHTML = `
+      <div style="padding:24px 20px; color:var(--muted); font-style:italic; font-size:13px; flex:1;">
+        No milestones yet — click "+ Add Milestone" to add key target dates.
+      </div>
+      ${isViewOnly ? '' : '<button class="milestones-add-btn" onclick="addMilestone()" title="Add milestone">+</button>'}`;
+    return;
+  }
+
+  const cards = milestones.map(m => {
+    let badge = '';
+    if (m.date) {
+      if      (m.date < today_)                            badge = `<div class="ms-status overdue">⚠ Overdue</div>`;
+      else if (m.date === today_)                          badge = `<div class="ms-status today">● Due today</div>`;
+      else {
+        const d = daysBetween(today(), parseDate(m.date));
+        badge = d <= 14
+          ? `<div class="ms-status upcoming">↗ ${d}d away</div>`
+          : `<div class="ms-status future">◦ ${d}d away</div>`;
+      }
+    }
+    return `
+      <div class="milestone-card">
+        ${isViewOnly ? '' : `<button class="ms-delete" onclick="deleteMilestone('${m.id}')" title="Remove">×</button>`}
+        <div class="ms-label">Milestone</div>
+        <input type="text" class="ms-name" value="${escapeHtml(m.name)}" placeholder="Milestone name"
+          onchange="updateMilestone('${m.id}','name',this.value)" ${isViewOnly ? 'disabled' : ''}>
+        <input type="date" class="ms-date" value="${m.date || ''}"
+          onchange="updateMilestone('${m.id}','date',this.value)" ${isViewOnly ? 'disabled' : ''}>
+        ${badge}
+      </div>`;
+  }).join('');
+
+  bar.innerHTML = cards + (isViewOnly ? '' : `<button class="milestones-add-btn" onclick="addMilestone()" title="Add milestone">+</button>`);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  TASKS — STATE & HELPERS
+// ════════════════════════════════════════════════════════════════════
+let tasks  = [];
+let nextId = 1;
+let dayWidth = 28;
+
+const barColors = ['var(--bar-1)','var(--bar-2)','var(--bar-3)','var(--bar-4)','var(--bar-5)','var(--bar-6)'];
+
+function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dt)) return '';
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function fmtDateDisplay(d) {
+  if (!d) return '';
+  const dt = (d instanceof Date) ? d : new Date(d + 'T00:00:00');
+  if (isNaN(dt)) return '';
+  return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  const d = new Date(s + 'T00:00:00');
+  if (isNaN(d)) return null;
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+
+function daysBetween(a, b) { return Math.round((b-a)/(1000*60*60*24)); }
+
+function isWeekend(d) { return d.getDay()===0 || d.getDay()===6; }
+
+function escapeHtml(s) {
+  if (s==null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Dependency resolution ──
+function resolveEffectiveStart(task, visited = new Set()) {
+  if (visited.has(task.id)) return parseDate(task.start);
+  if (!task.deps || !task.deps.trim()) return parseDate(task.start);
+
+  visited.add(task.id);
+  const depIds = task.deps.split(/[,\s]+/).map(s=>s.trim()).filter(Boolean);
+  let maxDepEnd = null;
+
+  for (const depId of depIds) {
+    const dep = tasks.find(t => t.id.toLowerCase() === depId.toLowerCase());
+    if (!dep) continue;
+    const depStart = resolveEffectiveStart(dep, new Set(visited));
+    if (!depStart) continue;
+    const depEnd = addDays(depStart, Math.max(1, dep.duration||1));
+    if (!maxDepEnd || depEnd > maxDepEnd) maxDepEnd = depEnd;
+  }
+
+  const manual = parseDate(task.start);
+  if (maxDepEnd) return (manual && manual > maxDepEnd) ? manual : maxDepEnd;
+  return manual;
+}
+
+function isDepDriven(task) {
+  if (!task.deps || !task.deps.trim()) return false;
+  for (const depId of task.deps.split(/[,\s]+/).map(s=>s.trim()).filter(Boolean)) {
+    const dep = tasks.find(t => t.id.toLowerCase() === depId.toLowerCase());
+    if (!dep) continue;
+    const depEnd = addDays(resolveEffectiveStart(dep, new Set([task.id])), Math.max(1, dep.duration||1));
+    const manual = parseDate(task.start);
+    if (!manual || depEnd >= manual) return true;
+  }
+  return false;
+}
+
+// ── Task CRUD ──
+function makeTask(o = {}) {
+  return { id:'T'+nextId++, name:'', owner:'', start:'', duration:5, deps:'', status:'Not started', progress:0, ...o };
+}
+
+function addTask() {
+  tasks.push(makeTask());
+  render();
+  pushToFirebase();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  render();
+  pushToFirebase();
+}
+
+function updateTask(id, field, value) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  if (field === 'duration') value = Math.max(1, parseInt(value)||1);
+  if (field === 'progress') value = Math.max(0, Math.min(100, parseInt(value)||0));
+  t[field] = value;
+  if (['start','duration','deps','status','progress'].includes(field)) renderGantt();
+  pushToFirebase();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER: TASK TABLE
+// ════════════════════════════════════════════════════════════════════
+function renderTasks() {
+  const body = document.getElementById('task-body');
+  if (tasks.length === 0) {
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted);font-style:italic;">
+      No tasks yet.${isViewOnly ? '' : ' Click "+ Add Task" to begin.'}</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = tasks.map(t => {
+    const driven   = isDepDriven(t);
+    const effStart = resolveEffectiveStart(t);
+    const effStr   = effStart ? fmtDate(effStart) : '';
+    const badge    = driven
+      ? `<span class="dep-driven-badge" title="Controlled by dependency">● auto: ${fmtDateDisplay(effStart)}</span>`
+      : '';
+
+    return `
+    <tr data-id="${t.id}" class="${driven ? 'has-dep-date' : ''}">
+      <td class="id-cell">${t.id}</td>
+      <td class="col-task"><input type="text" value="${escapeHtml(t.name)}" placeholder="Task name"
+        onchange="updateTask('${t.id}','name',this.value)" ${isViewOnly?'disabled':''}></td>
+      <td class="col-owner"><input type="text" value="${escapeHtml(t.owner)}" placeholder="Owner"
+        onchange="updateTask('${t.id}','owner',this.value)" ${isViewOnly?'disabled':''}></td>
+      <td class="col-date col-date-cell">
+        <div class="date-cell-wrap">
+          <input type="date" value="${driven ? effStr : (t.start||'')}"
+            ${driven ? 'readonly title="Controlled by dependency"' : ''}
+            ${isViewOnly ? 'disabled' : ''}
+            onchange="if(!${driven}) updateTask('${t.id}','start',this.value)"
+            style="${driven ? 'color:var(--accent);cursor:default;' : ''}">
+          ${badge}
+        </div>
+      </td>
+      <td class="col-duration"><input type="number" min="1" value="${t.duration}"
+        onchange="updateTask('${t.id}','duration',this.value)" ${isViewOnly?'disabled':''}></td>
+      <td class="col-deps"><input type="text" value="${escapeHtml(t.deps)}" placeholder="T1, T2"
+        onchange="updateTask('${t.id}','deps',this.value)" ${isViewOnly?'disabled':''}></td>
+      <td class="col-status">
+        <select class="status-select" onchange="updateTask('${t.id}','status',this.value)" ${isViewOnly?'disabled':''}>
+          ${['Not started','In progress','At risk','Blocked','Complete']
+            .map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td class="col-progress"><input type="number" min="0" max="100" value="${t.progress}"
+        onchange="updateTask('${t.id}','progress',this.value)" ${isViewOnly?'disabled':''}></td>
+      ${isViewOnly ? '' : `<td class="actions"><button class="row-delete" onclick="deleteTask('${t.id}')" title="Delete">×</button></td>`}
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER: GANTT
+// ════════════════════════════════════════════════════════════════════
+function getTaskDateRange() {
+  const starts = tasks.map(t => resolveEffectiveStart(t)).filter(Boolean);
+  if (!starts.length) return { start: addDays(today(),-3), end: addDays(today(),42) };
+  const minS = new Date(Math.min(...starts.map(d=>d.getTime())));
+  const maxE = new Date(Math.max(...tasks.map(t => {
+    const s = resolveEffectiveStart(t);
+    return s ? addDays(s, t.duration||1).getTime() : 0;
+  })));
+  return { start: addDays(minS,-2), end: addDays(maxE,4) };
+}
+
+function renderGantt() {
+  const gantt     = document.getElementById('gantt');
+  const range     = getTaskDateRange();
+  const totalDays = daysBetween(range.start, range.end) + 1;
+  const tlW       = totalDays * dayWidth;
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const today_    = today();
+
+  // Build month list
+  const months = [];
+  let cur = new Date(range.start);
+  while (cur <= range.end) {
+    const key = `${cur.getFullYear()}-${cur.getMonth()}`;
+    let m = months[months.length-1];
+    if (!m || m.key !== key) { m = {key, year:cur.getFullYear(), month:cur.getMonth(), days:[]}; months.push(m); }
+    m.days.push(new Date(cur));
+    cur = addDays(cur,1);
+  }
+
+  // All days list
+  const allDays = [];
+  let dd = new Date(range.start);
+  while (dd <= range.end) { allDays.push(new Date(dd)); dd = addDays(dd,1); }
+
+  // Labels
+  let labelsHtml = `<div class="gantt-label-header">Task / Owner</div>`;
+  tasks.forEach(t => {
+    labelsHtml += `<div class="gantt-label-row">
+      <span class="tid">${t.id}</span>
+      <span class="tname">${escapeHtml(t.name)||'<span style="color:var(--muted);font-style:italic;">(unnamed)</span>'}</span>
+      <span class="towner">${escapeHtml(t.owner)}</span>
+    </div>`;
+  });
+
+  // Header
+  let headerHtml = `<div class="gantt-header" style="width:${tlW}px;">`;
+  months.forEach(m => {
+    const mw = m.days.length * dayWidth;
+    headerHtml += `<div class="gantt-month" style="width:${mw}px;">
+      <div class="gantt-month-label">${monthNames[m.month]} ${m.year}</div>
+      <div class="gantt-days">`;
+    m.days.forEach(d => {
+      const wk = isWeekend(d) ? ' weekend' : '';
+      const td = fmtDate(d)===fmtDate(today_) ? ' today-marker' : '';
+      headerHtml += `<div class="gantt-day${wk}${td}" style="width:${dayWidth}px;">${d.getDate()}</div>`;
+    });
+    headerHtml += `</div></div>`;
+  });
+  headerHtml += `</div>`;
+
+  // Body
+  let bodyHtml = `<div class="gantt-body" style="width:${tlW}px;position:relative;">`;
+  tasks.forEach((t, idx) => {
+    bodyHtml += `<div class="gantt-row" data-id="${t.id}">`;
+    allDays.forEach(day => {
+      bodyHtml += `<div class="gantt-row-cell${isWeekend(day)?' weekend':''}" style="width:${dayWidth}px;"></div>`;
+    });
+    const eff = resolveEffectiveStart(t);
+    if (eff) {
+      const left  = daysBetween(range.start, eff) * dayWidth + 1;
+      const width = Math.max(1, t.duration) * dayWidth - 2;
+      const color = barColors[idx % barColors.length];
+      const sClass = 'status-' + t.status.toLowerCase().replace(/\s+/g,'-');
+      const prog  = Math.max(0, Math.min(100, t.progress||0));
+      bodyHtml += `
+        <div class="bar ${sClass}" style="left:${left}px;width:${width}px;background:${color};"
+          title="${escapeHtml(t.name)} · ${t.owner||'—'} · ${fmtDateDisplay(eff)} → ${fmtDateDisplay(addDays(eff,t.duration))} · ${t.progress}%">
+          <div class="bar-progress" style="width:${prog}%;"></div>
+          <span class="bar-label">${escapeHtml(t.name)||t.id}${t.progress>0?' · '+t.progress+'%':''}</span>
+        </div>`;
+    }
+    bodyHtml += `</div>`;
+  });
+
+  // Today line
+  const tOff = daysBetween(range.start, today_);
+  if (tOff >= 0 && tOff <= totalDays)
+    bodyHtml += `<div class="today-line" style="left:${tOff*dayWidth+dayWidth/2}px;"></div>`;
+
+  // Dep arrows
+  bodyHtml += `<svg class="dep-svg" style="width:${tlW}px;height:${tasks.length*44}px;">
+    <defs><marker id="arrowhead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon class="dep-arrow" points="0 0,7 3.5,0 7"/>
+    </marker></defs>
+    ${buildDependencyPaths(range.start)}
+  </svg>`;
+
+  bodyHtml += `</div>`;
+
+  gantt.innerHTML = `
+    <div class="gantt-labels">${labelsHtml}</div>
+    <div class="gantt-timeline">${headerHtml}${bodyHtml}</div>`;
+}
+
+function buildDependencyPaths(rangeStart) {
+  let paths = '';
+  tasks.forEach((t, idx) => {
+    if (!t.deps) return;
+    t.deps.split(/[,\s]+/).map(s=>s.trim()).filter(Boolean).forEach(depId => {
+      const depIdx = tasks.findIndex(x => x.id.toLowerCase() === depId.toLowerCase());
+      if (depIdx === -1) return;
+      const dep = tasks[depIdx];
+      const ds = resolveEffectiveStart(dep), ts = resolveEffectiveStart(t);
+      if (!ds || !ts) return;
+      const x1 = (daysBetween(rangeStart,ds) + Math.max(1,dep.duration)) * dayWidth;
+      const y1 = depIdx * 44 + 22;
+      const x2 = daysBetween(rangeStart,ts) * dayWidth;
+      const y2 = idx * 44 + 22;
+      const mx = Math.max(x1+8, x2-6);
+      paths += `<path class="dep-line" d="M ${x1} ${y1} L ${mx} ${y1} L ${mx} ${y2} L ${x2-2} ${y2}" marker-end="url(#arrowhead)"/>`;
+    });
+  });
+  return paths;
+}
+
+function changeZoom(dir) {
+  const levels=[16,22,28,36,48]; const cur=levels.indexOf(dayWidth);
+  dayWidth = levels[Math.max(0, Math.min(levels.length-1, (cur===-1?2:cur)+dir))];
+  renderGantt();
+}
+
+function render() { renderMilestones(); renderTasks(); renderGantt(); }
+
+// ════════════════════════════════════════════════════════════════════
+//  FIREBASE — SYNC ENGINE
+// ════════════════════════════════════════════════════════════════════
+
+// Track whether any editable field is focused to defer incoming remote updates
+let focusedInEditor = false;
+let pendingRemote   = null;
+
+document.addEventListener('focusin', e => {
+  if (e.target.closest('.task-wrap, .milestones-bar, .info-bar')) focusedInEditor = true;
+});
+
+document.addEventListener('focusout', () => {
+  // Small timeout so that focus moving between cells in the same table doesn't
+  // count as "left the editor"
+  setTimeout(() => {
+    focusedInEditor = !!document.querySelector('.task-wrap :focus, .milestones-bar :focus, .info-bar :focus');
+    if (!focusedInEditor && pendingRemote) {
+      applyRemoteState(pendingRemote);
+      pendingRemote = null;
+    }
+  }, 200);
+});
+
+function syncMeta() { pushToFirebase(); }
+
+function pushToFirebase() {
+  if (!db || !projectId) return; // standalone mode — nothing to sync
+  clearTimeout(syncTimer);
+  setSyncStatus('syncing');
+  syncTimer = setTimeout(() => {
+    const payload = {
+      meta: {
+        name:   document.getElementById('proj-name').value,
+        client: document.getElementById('proj-client').value,
+        pm:     document.getElementById('proj-pm').value,
+        status: document.getElementById('proj-status').value,
+      },
+      tasks,
+      milestones,
+      nextId,
+      nextMsId,
+      _writer:    clientId,
+      _ts:        firebase.database.ServerValue.TIMESTAMP,
+    };
+    db.ref(`/agilian/${projectId}`).set(payload)
+      .then(()    => setSyncStatus('synced'))
+      .catch(err  => { console.error('Firebase write error', err); setSyncStatus('error'); });
+  }, 700);
+}
+
+function handleRemoteSnapshot(snapshot) {
+  const data = snapshot.val();
+  if (!data) return; // brand-new project
+
+  // Ignore echoes of our own writes
+  if (data._writer === clientId) return;
+
+  if (focusedInEditor) {
+    pendingRemote = data; // defer until user finishes editing
+  } else {
+    applyRemoteState(data);
+  }
+}
+
+function applyRemoteState(data) {
+  if (data.meta) {
+    document.getElementById('proj-name').value   = data.meta.name   || '';
+    document.getElementById('proj-client').value = data.meta.client || '';
+    document.getElementById('proj-pm').value     = data.meta.pm     || '';
+    document.getElementById('proj-status').value = data.meta.status || '';
+  }
+  if (Array.isArray(data.tasks)) {
+    tasks  = data.tasks;
+    nextId = data.nextId || (Math.max(0, ...tasks.map(t=>parseInt(t.id.slice(1))||0)) + 1);
+  }
+  if (Array.isArray(data.milestones)) {
+    milestones = data.milestones;
+    nextMsId   = data.nextMsId || (milestones.length + 1);
+  }
+  render();
+}
+
+function setSyncStatus(state) {
+  const el = document.getElementById('sync-status-indicator');
+  if (!el) return;
+  const map = {
+    connecting: ['○ Connecting…',  '#f6a623'],
+    connected:  ['⚡ Live',         '#61ce70'],
+    syncing:    ['↑ Syncing…',      '#f6a623'],
+    synced:     ['✓ Saved',         '#61ce70'],
+    error:      ['✗ Sync error',    '#c90a11'],
+    offline:    ['○ Offline',       '#8a9ab0'],
+  };
+  const [text, color] = map[state] || map.offline;
+  el.textContent = text;
+  el.style.color  = color;
+}
+
+// ── Presence ──
+function setupPresence() {
+  const presenceRef = db.ref(`/agilian/${projectId}/presence/${clientId}`);
+  const connRef     = db.ref('.info/connected');
+
+  connRef.on('value', snap => {
+    if (!snap.val()) { setSyncStatus('offline'); return; }
+    presenceRef.set({ color: myColor, ts: firebase.database.ServerValue.TIMESTAMP });
+    presenceRef.onDisconnect().remove();
+    setSyncStatus('connected');
+  });
+
+  // Update heartbeat every 30s so stale entries can be cleaned
+  setInterval(() => {
+    if (db) presenceRef.update({ ts: firebase.database.ServerValue.TIMESTAMP });
+  }, 30000);
+
+  // Watch all presence
+  db.ref(`/agilian/${projectId}/presence`).on('value', snap => {
+    const raw    = snap.val() || {};
+    const now    = Date.now();
+    const active = Object.entries(raw).filter(([,v]) => v.ts && (now - v.ts) < 90000);
+    renderPresence(active);
+  });
+}
+
+function renderPresence(active) {
+  const dots    = document.getElementById('presence-dots');
+  const counter = document.getElementById('presence-count');
+  if (!dots) return;
+  dots.innerHTML = active.map(([id, p]) =>
+    `<span class="presence-dot${id===clientId?' you':''}" style="background:${p.color};"
+      title="${id===clientId?'You':'A collaborator is here'}"></span>`
+  ).join('');
+  const n = active.length;
+  counter.textContent = n===1 ? '1 person online' : `${n} people online`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  SHARE MODAL
+// ════════════════════════════════════════════════════════════════════
+function openShareModal() {
+  const base     = location.href.split('?')[0].split('#')[0];
+  const editUrl  = `${base}#id=${projectId}`;
+  const viewUrl  = `${base}?view=1#id=${projectId}`;
+
+  document.getElementById('share-edit-url').value    = editUrl;
+  document.getElementById('share-view-url').value    = viewUrl;
+  document.getElementById('share-project-id').value  = projectId;
+
+  document.getElementById('share-modal').classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').classList.remove('open');
+}
+
+function copyUrl(inputId, feedbackId) {
+  const input = document.getElementById(inputId);
+  input.select();
+  try {
+    document.execCommand('copy');
+  } catch (_) {
+    navigator.clipboard?.writeText(input.value);
+  }
+  const fb = document.getElementById(feedbackId);
+  fb.style.display = 'block';
+  setTimeout(() => { fb.style.display = 'none'; }, 2500);
+}
+
+document.getElementById('share-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeShareModal();
+});
+
+// ── View-only mode ──
+function initViewMode() {
+  isViewOnly = true;
+  document.body.classList.add('view-mode');
+  const badge = document.getElementById('view-mode-badge');
+  if (badge) badge.style.display = 'inline-flex';
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  EXCEL IMPORT (same as standalone)
+// ════════════════════════════════════════════════════════════════════
+let importWorkbook = null, importRows = [], importHeaders = [];
+
+function openImportModal()  { document.getElementById('import-modal').classList.add('open');  resetImportModal(); }
+function closeImportModal() { document.getElementById('import-modal').classList.remove('open'); }
+
+document.getElementById('import-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeImportModal();
+});
+
+function resetImportModal() {
+  importWorkbook = null; importRows = []; importHeaders = [];
+  document.getElementById('drop-zone').querySelector('.dz-title').textContent = 'Drop your Excel file here, or click to browse';
+  document.getElementById('drop-zone').querySelector('.dz-sub').textContent   = 'Supports .xlsx, .xls, and .csv files';
+  document.getElementById('sheet-picker').style.display    = 'none';
+  document.getElementById('mapping-section').style.display = 'none';
+  document.getElementById('preview-section').style.display = 'none';
+  document.getElementById('import-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+}
+
+function handleFileDrop(e) { e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) processFile(f); }
+function handleFileSelect(e) { const f=e.target.files[0]; if(f) processFile(f); }
+
+function processFile(file) {
+  if (!file.name.match(/\.(xlsx|xls|csv)$/i)) { alert('Please select an Excel (.xlsx/.xls) or CSV file.'); return; }
+  document.getElementById('drop-zone').querySelector('.dz-title').textContent = file.name;
+  document.getElementById('drop-zone').querySelector('.dz-sub').textContent = (file.size/1024).toFixed(1)+' KB — loading…';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      importWorkbook = XLSX.read(data, { type:'array', cellDates:true });
+      const sel = document.getElementById('sheet-select');
+      sel.innerHTML = importWorkbook.SheetNames.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      document.getElementById('drop-zone').querySelector('.dz-sub').textContent = `${importWorkbook.SheetNames.length} sheet(s) found`;
+      document.getElementById('sheet-picker').style.display = 'block';
+      loadSheet();
+    } catch (err) { alert('Could not read file: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function loadSheet() {
+  const ws = importWorkbook.Sheets[document.getElementById('sheet-select').value];
+  if (!ws) return;
+  const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  if (raw.length < 2) { alert('Sheet appears empty or has only one row.'); return; }
+  importHeaders = raw[0].map(h=>String(h).trim());
+  importRows    = raw.slice(1).filter(r=>r.some(c=>c!==''));
+  populateMappingDropdowns();
+  autoDetectMappings();
+  document.getElementById('mapping-section').style.display = 'block';
+  updatePreview();
+}
+
+function populateMappingDropdowns() {
+  const opts = '<option value="">— skip —</option>' + importHeaders.map((h,i)=>`<option value="${i}">${escapeHtml(h)}</option>`).join('');
+  ['map-name','map-owner','map-start','map-duration','map-deps','map-status','map-progress'].forEach(id => { document.getElementById(id).innerHTML = opts; });
+}
+
+function autoDetectMappings() {
+  const p = {
+    'map-name':     /task|name|title|description|activity/i,
+    'map-owner':    /owner|assigned|resource|who|responsible/i,
+    'map-start':    /start|begin|commence|from/i,
+    'map-duration': /duration|days|length|effort/i,
+    'map-deps':     /depend|predecessor|after|requires/i,
+    'map-status':   /status|state|phase/i,
+    'map-progress': /progress|complete|done|percent|%/i,
+  };
+  Object.entries(p).forEach(([id, rx]) => {
+    const m = importHeaders.findIndex(h=>rx.test(h));
+    if (m !== -1) document.getElementById(id).value = String(m);
+  });
+  ['map-name','map-owner','map-start','map-duration','map-deps','map-status','map-progress']
+    .forEach(id => { document.getElementById(id).onchange = updatePreview; });
+}
+
+function getColVal(row, selectId) {
+  const sel=document.getElementById(selectId); if (!sel||sel.value==='') return '';
+  const v=row[parseInt(sel.value,10)]; return (v===undefined||v===null)?'':String(v).trim();
+}
+
+function parseExcelDate(raw) {
+  if (!raw||raw==='') return '';
+  if (raw instanceof Date && !isNaN(raw)) return fmtDate(raw);
+  if (typeof raw==='number') { const d=XLSX.SSF.parse_date_code(raw); if(d) return fmtDate(new Date(d.y,d.m-1,d.d)); }
+  const a=new Date(String(raw)); return isNaN(a)?'':fmtDate(a);
+}
+
+function normaliseStatus(raw) {
+  const s=String(raw).toLowerCase();
+  if (/complete|done|finish|closed/i.test(s))     return 'Complete';
+  if (/progress|active|ongoing|started/i.test(s))  return 'In progress';
+  if (/risk|concern|warn/i.test(s))                return 'At risk';
+  if (/block|hold|stuck|wait/i.test(s))            return 'Blocked';
+  return 'Not started';
+}
+
+function buildMappedTasks() {
+  return importRows.map(row => {
+    const name=getColVal(row,'map-name'), owner=getColVal(row,'map-owner');
+    const rs=getColVal(row,'map-start'), dur=parseInt(getColVal(row,'map-duration'),10);
+    const deps=getColVal(row,'map-deps'), status=getColVal(row,'map-status');
+    const progress=parseInt(getColVal(row,'map-progress'),10);
+    return {
+      name, owner,
+      start:    parseExcelDate(rs)||rs,
+      duration: isNaN(dur)||dur<1?5:dur,
+      deps,
+      status:   status?normaliseStatus(status):'Not started',
+      progress: isNaN(progress)?0:Math.max(0,Math.min(100,progress)),
+    };
+  }).filter(t=>t.name);
+}
+
+function updatePreview() {
+  const mapped=buildMappedTasks();
+  document.getElementById('preview-section').style.display = mapped.length?'block':'none';
+  document.getElementById('import-btn').disabled = !mapped.length;
+  document.getElementById('preview-count').textContent = `(${mapped.length} task${mapped.length!==1?'s':''} ready to import)`;
+  const cols=['name','owner','start','duration','deps','status','progress'];
+  const heads=['Task','Owner','Start','Days','Depends On','Status','% Done'];
+  const preview=mapped.slice(0,8);
+  document.getElementById('preview-table').innerHTML =
+    `<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+     <tbody>${preview.map(t=>`<tr>${cols.map(c=>`<td title="${escapeHtml(String(t[c]))}">${escapeHtml(String(t[c]??''))}</td>`).join('')}</tr>`).join('')
+     }${mapped.length>8?`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:8px;font-style:italic;">… and ${mapped.length-8} more rows</td></tr>`:''}</tbody>`;
+}
+
+function runImport() {
+  const mapped=buildMappedTasks(); if (!mapped.length) return;
+  if (document.getElementById('opt-replace').checked) { tasks=[]; nextId=1; }
+  mapped.forEach(t => tasks.push(makeTask(t)));
+  closeImportModal();
+  render();
+  pushToFirebase();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  SAVE (offline copy)
+// ════════════════════════════════════════════════════════════════════
+function saveFile() {
+  const data = {
+    project: {
+      name:   document.getElementById('proj-name').value,
+      client: document.getElementById('proj-client').value,
+      pm:     document.getElementById('proj-pm').value,
+      status: document.getElementById('proj-status').value,
+    },
+    tasks, milestones, nextId, nextMsId
+  };
+
+  // Stamp current input values into the DOM so outerHTML reflects them
+  Object.entries(data.project).forEach(([k, v]) => {
+    const el = document.getElementById('proj-' + k);
+    if (el) el.setAttribute('value', v);
+  });
+
+  // Get HTML, strip any previously saved state block (prevents stale duplicates),
+  // then inject fresh data before </head>
+  let html = document.documentElement.outerHTML;
+  html = html.replace(/<script[^>]+id="saved-state"[^>]*>[\s\S]*?<\/script>\s*/g, '');
+  const script   = `<script id="saved-state" type="application/json">${JSON.stringify(data).replace(/<\//g,'<\\/')}<\/script>`;
+  const injected = html.replace('</head>', script + '\n</head>');
+
+  const blob = new Blob(['<!DOCTYPE html>\n' + injected], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${(data.project.name||'project').replace(/[^a-z0-9]+/gi,'_').toLowerCase()}_tracker_${fmtDate(new Date())}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function loadSavedState() {
+  const node = document.getElementById('saved-state');
+  if (!node) return false;
+  try {
+    const data = JSON.parse(node.textContent);
+    if (data.project) {
+      document.getElementById('proj-name').value   = data.project.name   || '';
+      document.getElementById('proj-client').value = data.project.client || '';
+      document.getElementById('proj-pm').value     = data.project.pm     || '';
+      document.getElementById('proj-status').value = data.project.status || '';
+    }
+    if (Array.isArray(data.tasks))      { tasks      = data.tasks;      nextId   = data.nextId   || tasks.length+1; }
+    if (Array.isArray(data.milestones)) { milestones = data.milestones; nextMsId = data.nextMsId || milestones.length+1; }
+    return true;
+  } catch(e) { console.error(e); return false; }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════════════════════
+document.getElementById('gen-date').textContent = fmtDate(new Date());
+
+if (FIREBASE_READY) {
+  // ── Firebase mode ──
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+
+  // Get/create project ID from URL hash: #id=abc123
+  const hash = new URLSearchParams(location.hash.replace(/^#/,''));
+  projectId  = hash.get('id');
+  if (!projectId) {
+    projectId = Math.random().toString(36).slice(2, 12);
+    history.replaceState(null, '', location.pathname + location.search + '#id=' + projectId);
+  }
+
+  document.getElementById('project-id-display').textContent = 'Project: ' + projectId;
+  document.getElementById('sync-bar').style.display = 'flex';
+
+  // View-only mode
+  if (new URLSearchParams(location.search).get('view') === '1') initViewMode();
+
+  // Subscribe to project data
+  db.ref(`/agilian/${projectId}`).on('value', handleRemoteSnapshot);
+
+  // Seed with blank rows if brand-new project (first load)
+  setTimeout(() => {
+    if (!tasks.length) {
+      tasks = [
+        makeTask({ name:'Discovery & Planning', start: fmtDate(today()),             duration:5  }),
+        makeTask({ name:'Design Phase',         start: fmtDate(addDays(today(),5)),  duration:7, deps:'T1' }),
+        makeTask({ name:'Development',          start: '',                           duration:10, deps:'T2' }),
+      ];
+      render();
+      pushToFirebase();
+    }
+  }, 1500); // wait for initial Firebase read
+
+  // Presence
+  setupPresence();
+
+} else {
+  // ── Standalone / unconfigured mode ──
+  document.getElementById('setup-banner').style.display = 'block';
+
+  if (!loadSavedState()) {
+    tasks = [
+      makeTask({ name:'Discovery & Planning', start: fmtDate(today()),             duration:5  }),
+      makeTask({ name:'Design Phase',         start: fmtDate(addDays(today(),5)),  duration:7, deps:'T1' }),
+      makeTask({ name:'Development',          start: '',                           duration:10, deps:'T2' }),
+    ];
+  }
+  render();
+}
+</script>
+</body>
+</html>

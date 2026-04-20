@@ -550,7 +550,7 @@ function openProject(id) {
   const projects = getProjects();
   const p = projects.find(p => p.id === id);
   if (p) { p.accessed = new Date().toISOString(); saveProjects(projects); }
-  window.location.href = editUrl(id);
+  window.open(editUrl(id), '_blank');
 }
 
 // ── Delete project ───────────────────────────────────────────────────

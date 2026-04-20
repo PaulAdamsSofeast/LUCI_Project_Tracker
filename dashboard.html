@@ -49,9 +49,9 @@
     color: #fff;
     padding: 0 32px;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto auto;
     align-items: center;
-    gap: 32px;
+    gap: 24px;
     min-height: 72px;
     margin-bottom: 40px;
   }
@@ -76,6 +76,28 @@
   }
 
   .masthead .meta strong { color: #fff; font-weight: 500; }
+
+  .masthead-nav {
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .masthead-nav a {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 7px 14px; border-radius: 3px;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .masthead-nav a:hover {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+
+  .masthead-nav a svg { flex-shrink: 0; }
 
   /* ── Layout ── */
   .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
@@ -351,6 +373,15 @@
     <img src="https://www.agiliantech.com/wp-content/uploads/2019/10/agilian-logo.png" alt="Agilian Technologies">
   </div>
   <h1>Project <em>Directory</em></h1>
+  <nav class="masthead-nav">
+    <a href="management_dashboard.html" title="Portfolio management view">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="7" height="9" rx="1"/><rect x="15" y="3" width="7" height="5" rx="1"/>
+        <rect x="15" y="12" width="7" height="9" rx="1"/><rect x="2" y="16" width="7" height="5" rx="1"/>
+      </svg>
+      Portfolio View
+    </a>
+  </nav>
   <div class="meta">
     <div id="date-display">—</div>
     <div>Collaborative Tracker</div>

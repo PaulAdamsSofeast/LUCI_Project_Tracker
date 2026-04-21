@@ -1646,14 +1646,25 @@ function saveFile() {
     },
     tasks, milestones, nextId, nextMsId
   };
-  const html     = document.documentElement.outerHTML;
+
+  // Stamp current input values into the DOM so outerHTML reflects them
+  Object.entries(data.project).forEach(([k, v]) => {
+    const el = document.getElementById('proj-' + k);
+    if (el) el.setAttribute('value', v);
+  });
+
+  // Get HTML, strip any previously saved state block (prevents stale duplicates),
+  // then inject fresh data before </head>
+  let html = document.documentElement.outerHTML;
+  html = html.replace(/<script[^>]+id="saved-state"[^>]*>[\s\S]*?<\/script>\s*/g, '');
   const script   = `<script id="saved-state" type="application/json">${JSON.stringify(data).replace(/<\//g,'<\\/')}<\/script>`;
-  const injected = html.replace('</head>', script+'</head>');
-  const blob     = new Blob(['<!DOCTYPE html>\n'+injected], {type:'text/html'});
-  const url      = URL.createObjectURL(blob);
-  const a        = document.createElement('a');
-  a.href         = url;
-  a.download     = `${(data.project.name||'project').replace(/[^a-z0-9]+/gi,'_').toLowerCase()}_tracker_${fmtDate(new Date())}.html`;
+  const injected = html.replace('</head>', script + '\n</head>');
+
+  const blob = new Blob(['<!DOCTYPE html>\n' + injected], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${(data.project.name||'project').replace(/[^a-z0-9]+/gi,'_').toLowerCase()}_tracker_${fmtDate(new Date())}.html`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
@@ -1699,12 +1710,14 @@ if (FIREBASE_READY) {
   // View-only mode
   if (new URLSearchParams(location.search).get('view') === '1') initViewMode();
 
-  // Subscribe to project data
-  db.ref(`/agilian/${projectId}`).on('value', handleRemoteSnapshot);
-
-  // Seed with blank rows if brand-new project (first load)
-  setTimeout(() => {
-    if (!tasks.length) {
+  // Read once first: seed blank data ONLY if the project truly doesn't exist yet.
+  // This prevents a new user opening a shared link from overwriting existing data.
+  db.ref(`/agilian/${projectId}`).once('value').then(snapshot => {
+    if (snapshot.exists()) {
+      // Project already has data — apply it, then start live listener
+      applyRemoteState(snapshot.val());
+    } else {
+      // Genuinely new project — seed with starter rows and push once
       tasks = [
         makeTask({ name:'Discovery & Planning', start: fmtDate(today()),             duration:5  }),
         makeTask({ name:'Design Phase',         start: fmtDate(addDays(today(),5)),  duration:7, deps:'T1' }),
@@ -1713,7 +1726,14 @@ if (FIREBASE_READY) {
       render();
       pushToFirebase();
     }
-  }, 1500); // wait for initial Firebase read
+    // Now subscribe to live updates (echoes from own writes are filtered by clientId)
+    db.ref(`/agilian/${projectId}`).on('value', handleRemoteSnapshot);
+  }).catch(err => {
+    console.error('Firebase initial read failed:', err);
+    setSyncStatus('error');
+    // Fall back to live listener even if once() fails
+    db.ref(`/agilian/${projectId}`).on('value', handleRemoteSnapshot);
+  });
 
   // Presence
   setupPresence();

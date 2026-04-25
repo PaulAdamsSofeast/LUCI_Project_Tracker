@@ -337,13 +337,96 @@
     text-align: center;
   }
 
-  table.tasks td.actions { width: 40px; text-align: center; padding: 0 6px; }
+    table.tasks td.actions { width: 44px; text-align: center; padding: 0 4px; }
 
-  .row-delete {
-    background: none; border: none; color: var(--muted); cursor: pointer;
-    font-size: 16px; padding: 6px 8px; line-height: 1; transition: color 0.15s; border-radius: 0;
+  /* ── Drag handle ── */
+  td.drag-cell { width: 26px; text-align: center; padding: 0; }
+  .drag-handle {
+    color: var(--muted); font-size: 16px; display: inline-block;
+    padding: 8px 4px; line-height: 1; user-select: none; cursor: grab;
+    transition: color 0.15s; letter-spacing: -1px;
   }
-  .row-delete:hover { color: var(--risk); background: none; }
+  .drag-handle:hover { color: var(--accent-dark); }
+  tr.dragging > td { opacity: 0.35; background: var(--accent-soft) !important; }
+  tr.drag-above > td { box-shadow: inset 0 2px 0 0 var(--accent); }
+  tr.drag-below > td { box-shadow: inset 0 -2px 0 0 var(--accent); }
+
+  /* ── Row menu (⋮) ── */
+  .row-menu { position: relative; display: inline-block; }
+  .row-menu-btn {
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; padding: 4px 8px; line-height: 1; cursor: pointer;
+    border-radius: 2px; letter-spacing: 0; text-transform: none;
+    font-family: inherit; font-weight: 700; transition: color 0.15s, background 0.15s;
+  }
+  .row-menu-btn:hover { color: var(--ink); background: var(--bg); }
+  .row-menu-popup {
+    display: none; position: absolute; right: 0; top: 100%; z-index: 20;
+    background: var(--surface); border: 1px solid var(--rule-strong);
+    border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    min-width: 148px; overflow: hidden;
+  }
+  .row-menu-popup.open { display: block; }
+  .row-menu-popup .menu-item {
+    display: block; width: 100%; text-align: left; padding: 9px 14px;
+    border: none; background: none; font-family: 'Roboto', sans-serif;
+    font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none;
+    color: var(--ink); cursor: pointer; border-radius: 0; transition: background 0.1s;
+  }
+  .row-menu-popup .menu-item:hover { background: var(--accent-soft); color: var(--accent-dark); }
+  .row-menu-popup .menu-divider { border: none; border-top: 1px solid var(--rule); margin: 2px 0; }
+  .row-menu-popup .menu-item.danger { color: var(--risk); }
+  .row-menu-popup .menu-item.danger:hover { background: #fff0f0; color: var(--risk); }
+
+  /* ── Milestone task badge ── */
+  .milestone-task-badge {
+    display: inline-block; font-family: 'Roboto Mono', monospace; font-size: 9px;
+    color: var(--accent-dark); background: rgba(52,70,113,0.08);
+    border: 1px solid rgba(52,70,113,0.2); padding: 1px 5px;
+    border-radius: 2px; vertical-align: middle; margin-left: 4px;
+    /* ── Gantt milestone diamond ── */
+  .gantt-diamond {
+    position: absolute; top: 50%; width: 18px; height: 18px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: var(--accent-dark); border: 2px solid rgba(255,255,255,0.85);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer; z-index: 2;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .gantt-diamond:hover { transform: translate(-50%, -50%) rotate(45deg) scale(1.25); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .gantt-diamond.status-at-risk { background: var(--warn); }
+  .gantt-diamond.status-blocked { background: var(--risk); }
+  .gantt-diamond.status-complete { opacity: 0.5; background: var(--ok); }
+
+  /* ── Key milestone date lines ── */
+  .gantt-ms-line {
+    position: absolute; top: 0; bottom: 0; width: 0;
+    border-left: 2px dashed var(--warn); z-index: 3; pointer-events: none;
+  }
+  .gantt-ms-line::before {
+    content: attr(data-label); position: absolute; bottom: 4px; left: 4px;
+    font-family: 'Roboto Mono', monospace; font-size: 8px; letter-spacing: 0.06em;
+    color: var(--warn); background: rgba(255,255,255,0.9); padding: 1px 4px;
+    white-space: nowrap; max-width: 72px; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ── Task-link select in milestone card ── */
+  .ms-task-link {
+    font-family: 'Roboto Mono', monospace; font-size: 10px; letter-spacing: 0;
+    padding: 4px 6px; border: 1px solid var(--rule); background: var(--bg);
+    color: var(--ink-soft); border-radius: 3px; cursor: pointer;
+    width: 100%; outline: none; margin-top: 8px; text-transform: none;
+  }
+  .ms-task-link:focus { border-color: var(--accent); }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-diamond { width: 10px; height: 10px; background: var(--accent-dark); transform: rotate(45deg); flex-shrink: 0; border-radius: 0; }
+
+  @media print {
+    .masthead { background: var(--accent-dark) !important; -webkit-print-color-adjust: exact; }
+    .sync-bar, .setup-banner, button, .toolbar, .row-menu, .drag-cell { display: none !important; }
+    body { padding: 0; background: white; }
+  }
 
   .col-task { min-width: 220px; }
   .col-owner { width: 130px; }
@@ -680,7 +763,8 @@
     </div>
     <div id="view-mode-badge" class="view-mode-badge">👁 View Only</div>
   </div>
-  <div class="sync-right">
+   <div class="sync-right">
+    <span id="pending-update-notice" style="display:none; color:var(--warn); font-size:10px; letter-spacing:0.06em;">↓ Update pending…</span>
     <span id="project-id-display" style="color: rgba(255,255,255,0.4); font-size: 10px;"></span>
     <button class="share-btn hide-in-view" onclick="openShareModal()">🔗 Share</button>
     <button class="share-btn" onclick="window.print()">Print / PDF</button>
@@ -728,9 +812,10 @@
       <h2>Tasks &amp; Ownership</h2>
     </div>
     <div class="toolbar hide-in-view">
-      <button onclick="addTask()">+ Add Task</button>
+       <button onclick="addTask()">+ Add Task</button>
       <button onclick="openImportModal()">⬆ Import Excel</button>
-      <button onclick="saveFile()" class="primary">Save Copy</button>
+      <button onclick="saveFile()">Save Copy</button>
+      <button onclick="saveAndUpdate()" class="primary">✓ Save &amp; Update</button>
     </div>
   </div>
 
@@ -738,6 +823,7 @@
     <table class="tasks" id="task-table">
       <thead>
         <tr>
+          <th class="hide-in-view" style="width:26px;"></th>
           <th class="col-id">ID</th>
           <th class="col-task">Task</th>
           <th class="col-owner">Owner</th>
@@ -1017,9 +1103,13 @@ function renderMilestones() {
 // ════════════════════════════════════════════════════════════════════
 //  TASKS — STATE & HELPERS
 // ════════════════════════════════════════════════════════════════════
-let tasks  = [];
-let nextId = 1;
+let tasks    = [];
+let nextId   = 1;
 let dayWidth = 28;
+let version      = 1;
+let versionDate  = '';
+let dragSrcIdx   = null;
+let pendingRemoteTimer = null;
 
 const barColors = ['var(--bar-1)','var(--bar-2)','var(--bar-3)','var(--bar-4)','var(--bar-5)','var(--bar-6)'];
 
@@ -1098,10 +1188,20 @@ function makeTask(o = {}) {
   return { id:'T'+nextId++, name:'', owner:'', start:'', duration:5, deps:'', status:'Not started', progress:0, ...o };
 }
 
-function addTask() {
-  tasks.push(makeTask());
-  render();
-  pushToFirebase();
+function addTask() { tasks.push(makeTask()); render(); pushToFirebase(); }
+
+function insertTaskAbove(id) {
+  const idx = tasks.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  tasks.splice(idx, 0, makeTask());
+  closeAllRowMenus(); render(); pushToFirebase();
+}
+
+function insertTaskBelow(id) {
+  const idx = tasks.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  tasks.splice(idx + 1, 0, makeTask());
+  closeAllRowMenus(); render(); pushToFirebase();
 }
 
 function deleteTask(id) {
@@ -1113,12 +1213,86 @@ function deleteTask(id) {
 function updateTask(id, field, value) {
   const t = tasks.find(t => t.id === id);
   if (!t) return;
-  if (field === 'duration') value = Math.max(1, parseInt(value)||1);
+    if (field === 'duration') { const v = parseInt(value); value = isNaN(v) ? 1 : Math.max(0, v); }
   if (field === 'progress') value = Math.max(0, Math.min(100, parseInt(value)||0));
   t[field] = value;
   if (['start','duration','deps','status','progress'].includes(field)) renderGantt();
   pushToFirebase();
 }
+// ── Row menu ──
+function toggleRowMenu(id) {
+  const popup = document.getElementById('menu-' + id);
+  if (!popup) return;
+  const isOpen = popup.classList.contains('open');
+  closeAllRowMenus();
+  if (!isOpen) popup.classList.add('open');
+}
+
+function closeAllRowMenus() {
+  document.querySelectorAll('.row-menu-popup.open').forEach(p => p.classList.remove('open'));
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.row-menu')) closeAllRowMenus();
+});
+
+// ── Drag and drop ──
+function onDragStart(e, idx) {
+  dragSrcIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(idx));
+  setTimeout(() => {
+    const tr = document.querySelector(`#task-body tr[data-idx="${idx}"]`);
+    if (tr) tr.classList.add('dragging');
+  }, 0);
+}
+
+function onDragOver(e, idx) {
+  e.preventDefault();
+  if (dragSrcIdx === null || dragSrcIdx === idx) return;
+  e.dataTransfer.dropEffect = 'move';
+  const tr = e.currentTarget;
+  const rect = tr.getBoundingClientRect();
+  document.querySelectorAll('#task-body tr').forEach(r => r.classList.remove('drag-above','drag-below'));
+  tr.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-above' : 'drag-below');
+}
+
+function onDragLeave(e) { e.currentTarget.classList.remove('drag-above','drag-below'); }
+
+function onDrop(e, idx) {
+  e.preventDefault();
+  if (dragSrcIdx === null || dragSrcIdx === idx) return;
+  const tr = e.currentTarget;
+  const rect = tr.getBoundingClientRect();
+  const dropAfter = e.clientY >= rect.top + rect.height / 2;
+  let targetIdx = dropAfter ? idx + 1 : idx;
+  const moved = tasks.splice(dragSrcIdx, 1)[0];
+  if (dragSrcIdx < targetIdx) targetIdx--;
+  tasks.splice(targetIdx, 0, moved);
+  dragSrcIdx = null;
+  document.querySelectorAll('#task-body tr').forEach(r => r.classList.remove('dragging','drag-above','drag-below'));
+  render(); pushToFirebase();
+}
+
+function onDragEnd() {
+  dragSrcIdx = null;
+  document.querySelectorAll('#task-body tr').forEach(r => r.classList.remove('dragging','drag-above','drag-below'));
+}
+
+// ── Version / Save & Update ──
+function updateVersionDisplay() {
+  const el = document.getElementById('version-label');
+  if (!el) return;
+  el.textContent = versionDate ? `v${version} · ${versionDate}` : `v${version}`;
+}
+
+function saveAndUpdate() {
+  version++;
+  versionDate = fmtDate(new Date());
+  updateVersionDisplay();
+  pushToFirebase();
+}
+
 
 // ════════════════════════════════════════════════════════════════════
 //  RENDER: TASK TABLE
@@ -1131,19 +1305,34 @@ function renderTasks() {
     return;
   }
 
-  body.innerHTML = tasks.map(t => {
+   body.innerHTML = tasks.map((t, idx) => {
     const driven   = isDepDriven(t);
     const effStart = resolveEffectiveStart(t);
     const effStr   = effStart ? fmtDate(effStart) : '';
     const badge    = driven
       ? `<span class="dep-driven-badge" title="Controlled by dependency">● auto: ${fmtDateDisplay(effStart)}</span>`
       : '';
+    const isMilestone = t.duration === 0;
+    const msBadge = isMilestone ? `<span class="milestone-task-badge">◆ milestone</span>` : '';
 
     return `
-    <tr data-id="${t.id}" class="${driven ? 'has-dep-date' : ''}">
+    <tr data-id="${t.id}" data-idx="${idx}"
+      ondragover="onDragOver(event,${idx})"
+      ondragleave="onDragLeave(event)"
+      ondrop="onDrop(event,${idx})"
+      class="${driven ? 'has-dep-date' : ''}">
+      ${isViewOnly ? '' : `<td class="drag-cell">
+        <span class="drag-handle" draggable="true"
+          ondragstart="onDragStart(event,${idx})"
+          ondragend="onDragEnd()"
+          title="Drag to reorder">⠿</span>
+      </td>`}
       <td class="id-cell">${t.id}</td>
-      <td class="col-task"><input type="text" value="${escapeHtml(t.name)}" placeholder="Task name"
-        onchange="updateTask('${t.id}','name',this.value)" ${isViewOnly?'disabled':''}></td>
+      <td class="col-task">
+        <input type="text" value="${escapeHtml(t.name)}" placeholder="Task name"
+          onchange="updateTask('${t.id}','name',this.value)" ${isViewOnly?'disabled':''}>
+        ${msBadge}
+      </td>
       <td class="col-owner"><input type="text" value="${escapeHtml(t.owner)}" placeholder="Owner"
         onchange="updateTask('${t.id}','owner',this.value)" ${isViewOnly?'disabled':''}></td>
       <td class="col-date col-date-cell">
@@ -1156,7 +1345,8 @@ function renderTasks() {
           ${badge}
         </div>
       </td>
-      <td class="col-duration"><input type="number" min="1" value="${t.duration}"
+      <td class="col-duration"><input type="number" min="0" value="${t.duration}"
+        title="${isMilestone ? 'Milestone — shown as ◆ on Gantt' : 'Set to 0 to mark as milestone'}"
         onchange="updateTask('${t.id}','duration',this.value)" ${isViewOnly?'disabled':''}></td>
       <td class="col-deps"><input type="text" value="${escapeHtml(t.deps)}" placeholder="T1, T2"
         onchange="updateTask('${t.id}','deps',this.value)" ${isViewOnly?'disabled':''}></td>
@@ -1168,7 +1358,17 @@ function renderTasks() {
       </td>
       <td class="col-progress"><input type="number" min="0" max="100" value="${t.progress}"
         onchange="updateTask('${t.id}','progress',this.value)" ${isViewOnly?'disabled':''}></td>
-      ${isViewOnly ? '' : `<td class="actions"><button class="row-delete" onclick="deleteTask('${t.id}')" title="Delete">×</button></td>`}
+      ${isViewOnly ? '' : `<td class="actions">
+        <div class="row-menu">
+          <button class="row-menu-btn" onclick="toggleRowMenu('${t.id}')" title="Row actions">⋮</button>
+          <div class="row-menu-popup" id="menu-${t.id}">
+            <button class="menu-item" onclick="insertTaskAbove('${t.id}')">↑ Insert Above</button>
+            <button class="menu-item" onclick="insertTaskBelow('${t.id}')">↓ Insert Below</button>
+            <hr class="menu-divider">
+            <button class="menu-item danger" onclick="deleteTask('${t.id}')">× Delete</button>
+          </div>
+        </div>
+      </td>`}
     </tr>`;
   }).join('');
 }
@@ -1244,21 +1444,36 @@ function renderGantt() {
     allDays.forEach(day => {
       bodyHtml += `<div class="gantt-row-cell${isWeekend(day)?' weekend':''}" style="width:${dayWidth}px;"></div>`;
     });
-    const eff = resolveEffectiveStart(t);
+       const eff = resolveEffectiveStart(t);
     if (eff) {
-      const left  = daysBetween(range.start, eff) * dayWidth + 1;
-      const width = Math.max(1, t.duration) * dayWidth - 2;
-      const color = barColors[idx % barColors.length];
       const sClass = 'status-' + t.status.toLowerCase().replace(/\s+/g,'-');
-      const prog  = Math.max(0, Math.min(100, t.progress||0));
-      bodyHtml += `
-        <div class="bar ${sClass}" style="left:${left}px;width:${width}px;background:${color};"
-          title="${escapeHtml(t.name)} · ${t.owner||'—'} · ${fmtDateDisplay(eff)} → ${fmtDateDisplay(addDays(eff,t.duration))} · ${t.progress}%">
-          <div class="bar-progress" style="width:${prog}%;"></div>
-          <span class="bar-label">${escapeHtml(t.name)||t.id}${t.progress>0?' · '+t.progress+'%':''}</span>
-        </div>`;
+      if (t.duration === 0) {
+        const cx = daysBetween(range.start, eff) * dayWidth + dayWidth / 2;
+        bodyHtml += `<div class="gantt-diamond ${sClass}" style="left:${cx}px;"
+          title="◆ ${escapeHtml(t.name)} · ${fmtDateDisplay(eff)}${t.owner ? ' · '+t.owner : ''}"></div>`;
+      } else {
+        const left  = daysBetween(range.start, eff) * dayWidth + 1;
+        const width = Math.max(1, t.duration) * dayWidth - 2;
+        const color = barColors[idx % barColors.length];
+        const prog  = Math.max(0, Math.min(100, t.progress||0));
+        bodyHtml += `
+          <div class="bar ${sClass}" style="left:${left}px;width:${width}px;background:${color};"
+            title="${escapeHtml(t.name)} · ${t.owner||'—'} · ${fmtDateDisplay(eff)} → ${fmtDateDisplay(addDays(eff,t.duration))} · ${t.progress}%">
+            <div class="bar-progress" style="width:${prog}%;"></div>
+            <span class="bar-label">${escapeHtml(t.name)||t.id}${t.progress>0?' · '+t.progress+'%':''}</span>
+          </div>`;
+      }
     }
     bodyHtml += `</div>`;
+  });
+
+  // Key milestone date lines
+  milestones.forEach(m => {
+    const mDate = m.date;
+    if (!mDate) return;
+    const mOff = daysBetween(range.start, parseDate(mDate));
+    if (mOff < 0 || mOff > totalDays) return;
+    bodyHtml += `<div class="gantt-ms-line" style="left:${mOff * dayWidth + dayWidth/2}px;" data-label="${escapeHtml(m.name || 'Milestone')}"></div>`;
   });
 
   // Today line
@@ -1291,7 +1506,9 @@ function buildDependencyPaths(rangeStart) {
       const dep = tasks[depIdx];
       const ds = resolveEffectiveStart(dep), ts = resolveEffectiveStart(t);
       if (!ds || !ts) return;
-      const x1 = (daysBetween(rangeStart,ds) + Math.max(1,dep.duration)) * dayWidth;
+            const x1 = dep.duration === 0
+        ? daysBetween(rangeStart, ds) * dayWidth + dayWidth / 2
+        : (daysBetween(rangeStart, ds) + Math.max(1, dep.duration)) * dayWidth;
       const y1 = depIdx * 44 + 22;
       const x2 = daysBetween(rangeStart,ts) * dayWidth;
       const y2 = idx * 44 + 22;
@@ -1340,7 +1557,7 @@ function pushToFirebase() {
   if (!db || !projectId) return; // standalone mode — nothing to sync
   clearTimeout(syncTimer);
   setSyncStatus('syncing');
-  syncTimer = setTimeout(() => {
+    syncTimer = setTimeout(() => {
     const payload = {
       meta: {
         name:   document.getElementById('proj-name').value,
@@ -1348,17 +1565,15 @@ function pushToFirebase() {
         pm:     document.getElementById('proj-pm').value,
         status: document.getElementById('proj-status').value,
       },
-      tasks,
-      milestones,
-      nextId,
-      nextMsId,
-      _writer:    clientId,
-      _ts:        firebase.database.ServerValue.TIMESTAMP,
+      tasks, milestones, nextId, nextMsId,
+      version, versionDate,
+      _writer: clientId,
+      _ts:     firebase.database.ServerValue.TIMESTAMP,
     };
     db.ref(`/agilian/${projectId}`).set(payload)
-      .then(()    => setSyncStatus('synced'))
-      .catch(err  => { console.error('Firebase write error', err); setSyncStatus('error'); });
-  }, 700);
+      .then(()   => setSyncStatus('synced'))
+      .catch(err => { console.error('Firebase write error', err); setSyncStatus('error'); });
+  }, 300);
 }
 
 function handleRemoteSnapshot(snapshot) {
